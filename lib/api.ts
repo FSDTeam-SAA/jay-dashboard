@@ -8,6 +8,20 @@ const api = axios.create({
   },
 })
 
+type QueryParams = Record<string, string | number | boolean | null | undefined>
+
+const buildQueryString = (params: QueryParams) => {
+  const searchParams = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return
+    searchParams.append(key, String(value))
+  })
+
+  const queryString = searchParams.toString()
+  return queryString ? `?${queryString}` : ""
+}
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
@@ -45,6 +59,39 @@ export const adminApi = {
   deleteUser: (userId: string) => api.delete(`/admin/users/${userId}`),
 
   getMonthlyStats: (year: number, month: number) => api.get(`/admin/stats/monthly?year=${year}&month=${month}`),
+
+  getSubscriptionPaymentHistory: (params: QueryParams = {}) =>
+    api.get(`/admin/payments/subscriptions/history${buildQueryString(params)}`),
+
+  getPaidUsersList: (params: QueryParams = {}) => api.get(`/admin/payments/paid-users${buildQueryString(params)}`),
+}
+
+export const subscriptionApi = {
+  getSubscriptions: (activeOnly?: boolean) =>
+    api.get(`/subscription${buildQueryString({ activeOnly: activeOnly ? "true" : undefined })}`),
+
+  getSubscriptionById: (subscriptionId: string) => api.get(`/subscription/${subscriptionId}`),
+
+  createSubscription: (payload: {
+    name: string
+    benefits: string[]
+    priceMonthly: number
+    priceYearly: number
+    isActive: boolean
+  }) => api.post("/subscription", payload),
+
+  updateSubscription: (
+    subscriptionId: string,
+    payload: Partial<{
+      name: string
+      benefits: string[]
+      priceMonthly: number
+      priceYearly: number
+      isActive: boolean
+    }>,
+  ) => api.patch(`/subscription/${subscriptionId}`, payload),
+
+  deleteSubscription: (subscriptionId: string) => api.delete(`/subscription/${subscriptionId}`),
 }
 
 export { api }
