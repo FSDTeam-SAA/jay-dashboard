@@ -12,10 +12,12 @@ import {
   CreditCard,
   Receipt,
   BadgeCheck,
+  KeyRound,
   Menu,
   X,
   LogOut,
 } from "lucide-react"
+import Image from "next/image"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -28,7 +30,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login")
+    if (status === "unauthenticated") router.push("/auth/login")
   }, [status, router])
 
   useEffect(() => {
@@ -82,13 +84,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Logo */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-md">
-                <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full" />
-                </div>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Spotem365</span>
+            <div className="flex items-center justify-center space-x-3">
+              <Image
+                src="/logo.png"
+                alt="Logo"
+                width={500}
+                height={500}
+                className="w-[148px] h-[148px]"
+              />
             </div>
 
             <Button
@@ -148,8 +151,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           <Button
+            asChild
             variant="ghost"
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="w-full justify-start text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+          >
+            <Link href="/auth/change-password">
+              <KeyRound className="h-5 w-5 mr-3" />
+              Change Password
+            </Link>
+          </Button>
+
+          <Button
+            variant="ghost"
+            onClick={() => signOut({ callbackUrl: "/auth/login" })}
             className="w-full justify-start text-gray-700 hover:bg-red-50 hover:text-red-600"
           >
             <LogOut className="h-5 w-5 mr-3" />

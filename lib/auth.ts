@@ -1,7 +1,12 @@
 import type { NextAuthConfig } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 
+const authApiBaseUrl = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_BASE_URL
+const authSecret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
+
 export const authConfig: NextAuthConfig = {
+  secret: authSecret,
+  trustHost: true,
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -10,12 +15,12 @@ export const authConfig: NextAuthConfig = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.email || !credentials?.password || !authApiBaseUrl) {
           return null
         }
 
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/auth/login`, {
+          const response = await fetch(`${authApiBaseUrl}/auth/login`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -66,7 +71,7 @@ export const authConfig: NextAuthConfig = {
     },
   },
   pages: {
-    signIn: "/login",
+    signIn: "/auth/login",
   },
   session: {
     strategy: "jwt",
