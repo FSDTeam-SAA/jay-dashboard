@@ -1,11 +1,23 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useEffect, useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { adminApi } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { AlertChart } from "@/components/dashboard/alert-chart"
 import { AnalyticsCards } from "@/components/dashboard/analytics-cards"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
@@ -13,21 +25,55 @@ import Link from "next/link"
 import { toast } from "sonner"
 
 export default function DashboardPage() {
-  const { data: usersData, isLoading: usersLoading } = useQuery({
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  const {
+    data: usersData,
+    isLoading: usersLoading,
+    error: usersError,
+  } = useQuery<any>({
     queryKey: ["users", 1, 5], // Show only 5 users on dashboard
     queryFn: () => adminApi.getUsers(1, 5),
+  })
+
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useQuery<any>({
+    queryKey: ["monthly-stats", 2025, 3],
+    queryFn: () => adminApi.getMonthlyStats(2025, 3),
+  })
+
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) => adminApi.deleteUser(userId),
+    onSuccess: () => {
+      toast.success("User deleted successfully")
+      queryClient.invalidateQueries({ queryKey: ["users"] })
+      setDeleteUserId(null)
+    },
     onError: () => {
-      toast.error("Failed to load users")
+      toast.error("Failed to delete user")
+      setDeleteUserId(null)
     },
   })
 
-  const { data: statsData, isLoading: statsLoading } = useQuery({
-    queryKey: ["monthly-stats", 2025, 3],
-    queryFn: () => adminApi.getMonthlyStats(2025, 3),
-    onError: () => {
+  const handleDeleteUser = (userId: string) => {
+    deleteUserMutation.mutate(userId)
+  }
+
+  useEffect(() => {
+    if (usersError) {
+      toast.error("Failed to load users")
+    }
+  }, [usersError])
+
+  useEffect(() => {
+    if (statsError) {
       toast.error("Failed to load statistics")
-    },
-  })
+    }
+  }, [statsError])
 
   return (
     <DashboardLayout>
@@ -95,15 +141,47 @@ export default function DashboardPage() {
                       </p>
                       <p className="text-sm text-muted-foreground">10:00Am</p>
                     </div>
-                    <Button variant="destructive" size="sm" className="h-8 w-8 p-0">
-                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          fillRule="evenodd"
-                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          aria-label={`Delete ${user.name}`}
+                          disabled={deleteUserMutation.isPending && deleteUserId === user._id}
+                        >
+                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                              fillRule="evenodd"
+                              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="sm:max-w-md">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete User</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete{" "}
+                            <span className="font-medium text-foreground">{user.name}</span>? This action cannot be
+                            undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>No</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => {
+                              setDeleteUserId(user._id)
+                              handleDeleteUser(user._id)
+                            }}
+                            className="bg-destructive text-white hover:bg-destructive/90"
+                          >
+                            Yes
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 ))}
               </div>
